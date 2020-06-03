@@ -26,6 +26,12 @@ class Headers:
         except IndexError:
             return default
 
+    def get_int(self, name):
+        try:
+            return int(self.get(name))
+        except (TypeError, ValueError):
+            return None
+
     def __iter__(self) -> HeadersGenerator:
         for name, values in self._headers.items():
             for value in values:

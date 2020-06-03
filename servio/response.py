@@ -43,28 +43,23 @@ class Response:
         """
         Write this response to a socket.
         """
-        _content_length = self.headers.get("content-length")
-        if _content_length is None:
+        content_length = self.headers.get_int("content-length")
+        if content_length is None:
             try:
-                body_stat = os.fstat(self.body.fileno())
+                body_stat = os.fstat(self.body.fileno())  # type: ignore
                 content_length = body_stat.st_size
-                print("Content-length: ", content_length)
             except OSError:
-                self.body.seek(0, os.SEEK_END)
-                content_length = self.body.tell()
-                self.body.seek(0, os.SEEK_SET)
+                self.body.seek(0, os.SEEK_END)  # type: ignore
+                content_length = self.body.tell()  # type: ignore
+                self.body.seek(0, os.SEEK_SET)  # type: ignore
 
             if content_length > 0:
-                self.headers.add("content-length", _content_length)
+                self.headers.add("content-length", str(content_length))
 
         headers = b"HTTP/1.1 " + self.status + b"\r\n"
         for header_name, header_value in self.headers:
             headers += f"{header_name}: {header_value}\r\n".encode()
 
         sock.sendall(headers + b"\r\n")
-        if _content_length:
-            # Socket's sendfile figures out whether the parameter is a regular file
-            # or not. If it is a regular file, then it uses the high-performance
-            # sendfile system call to write the file to the socket. Else, it falls
-            # back to regular send calls.
+        if content_length > 0:
             sock.sendfile(self.body)

@@ -6,7 +6,7 @@ import typing
 from .response import Response
 
 
-SERVER_ROOT = os.path.abspath("www")
+SERVER_ROOT = os.path.abspath(".")
 
 
 def serve_file(sock: socket.socket, path: str) -> None:
@@ -37,7 +37,7 @@ def serve_file(sock: socket.socket, path: str) -> None:
 
             response = Response(status="200 OK", body=f)
             response.headers.add("content-type", content_type)
-            response.headers.add("content-length", stat.st_size)
+            response.headers.add("content-length", str(stat.st_size))
             response.send(sock)
             return
     except FileNotFoundError:
