@@ -6,20 +6,18 @@ import typing
 from .response import Response
 
 
-SERVER_ROOT = os.path.abspath(".")
-
-
-def serve_file(sock: socket.socket, path: str) -> None:
+def serve_file(sock: socket.socket, root_path: str, path: str) -> None:
     """
-    Given a socket and the relative path to a file (relative to SERVER_ROOT),
+    Given a socket and the relative path to a file (relative to root_path),
     send that file to the socket if it exists. If the file doesn't exist,
     send a "404 Not Found" response.
     """
+    root_path = os.path.abspath(root_path)
     if path == "/":
         path = "/index.html"
 
-    abspath = os.path.normpath(os.path.join(SERVER_ROOT, path.lstrip("/")))
-    if not abspath.startswith(SERVER_ROOT):
+    abspath = os.path.normpath(os.path.join(root_path, path.lstrip("/")))
+    if not abspath.startswith(root_path):
         response = Response(status="404 Not Found", content="Not Found")
         response.send(sock)
         return

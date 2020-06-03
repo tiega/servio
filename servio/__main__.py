@@ -1,4 +1,3 @@
-from servio import HTTPServer
+from .cli import main
 
-server = HTTPServer()
-server.serve_forever()
+main()

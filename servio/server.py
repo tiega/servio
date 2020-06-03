@@ -11,18 +11,23 @@ from .serve_file import serve_file
 
 
 class HTTPServer:
-    def __init__(self, host="127.0.0.1", port=9000, worker_count=16) -> None:
+    def __init__(
+        self, host="127.0.0.1", port=9000, worker_count=16, root_path: str = "./"
+    ) -> None:
         self.host = host
         self.port = port
         self.worker_count = worker_count
         self.worker_backlog = worker_count * 8
+        self.root_path = root_path
         self.connection_queue: Queue = Queue(self.worker_backlog)
 
     def serve_forever(self) -> None:
         print(f"Starting {self.worker_count} workers...")
         workers = []
         for _ in range(self.worker_count):
-            worker = HTTPWorker(connection_queue=self.connection_queue)
+            worker = HTTPWorker(
+                connection_queue=self.connection_queue, root_path=self.root_path
+            )
             worker.start()
             workers.append(worker)
 
@@ -31,7 +36,7 @@ class HTTPServer:
             server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             server_socket.bind((self.host, self.port))
             server_socket.listen(self.worker_backlog)
-            print(f"Listening on {self.host}:{self.port}...")
+            print(f"Listening on http://{self.host}:{self.port}/...")
 
             while True:
                 try:
@@ -47,11 +52,12 @@ class HTTPServer:
 
 
 class HTTPWorker(Thread):
-    def __init__(self, connection_queue: Queue) -> None:
+    def __init__(self, connection_queue: Queue, root_path: str) -> None:
         super().__init__(daemon=True)
 
         self.connection_queue: Queue = connection_queue
         self.running: bool = False
+        self.root_path = root_path
 
     def stop(self) -> None:
         self.running = False
@@ -80,11 +86,11 @@ class HTTPWorker(Thread):
         with client_sock:
             try:
                 request = Request.from_socket(client_sock)
-                if "100-continue" in request.headers.get("expect", ""):
+                if "100-continue" in request.headers.get("expect", ""):  # type: ignore
                     client_sock.sendall(b"HTTP/1.1 100 Continue\r\n\r\n")
 
                 try:
-                    content_length = int(request.headers.get("content-length", "0"))
+                    content_length = int(request.headers.get("content-length", "0"))  # type: ignore
                 except ValueError:
                     content_length = 0
 
@@ -99,7 +105,7 @@ class HTTPWorker(Thread):
                     response.send(client_sock)
                     return
 
-                serve_file(client_sock, request.path)
+                serve_file(client_sock, self.root_path, request.path)
             except Exception as e:
                 print(f"Failed to parse request: {e}")
                 response = Response(status="400 Bad Request", content="Bad Request")
